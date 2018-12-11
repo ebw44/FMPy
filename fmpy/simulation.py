@@ -49,7 +49,7 @@ class Recorder(object):
                 self.info[sv.type] = names, vrs, shapes, n_values, getter
 
         # create the columns for the NumPy array
-        for t, dt in [('Real', np.float64), ('Integer', np.int32), ('Boolean', np.bool_)]:
+        for t, dt in [('Float64', np.float64), ('Integer', np.int32), ('Boolean', np.bool_)]:
             if t in self.info:
                 self.types.append(t)
                 names, _, shapes, _, _ = self.info[t]

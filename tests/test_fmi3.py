@@ -32,13 +32,13 @@ class FMI3Test(unittest.TestCase):
         def get_real(variable):
             vr = (fmi3ValueReference * 1)(variable.valueReference)
             value = np.zeros(variable.extent)
-            status = fmu.fmi3GetReal(fmu.component, vr, len(vr), cast(value.ctypes.data, POINTER(fmi3Real)), value.size)
+            status = fmu.fmi3GetReal(fmu.component, vr, len(vr), cast(value.ctypes.data, POINTER(fmi3Float64)), value.size)
             self.assertEqual(status, fmi3OK)
             return value
 
         def set_real(variable, data):
             vr = (fmi3ValueReference * 1)(variable.valueReference)
-            status = fmu.fmi3SetReal(fmu.component, vr, len(vr), cast(data.ctypes.data, POINTER(fmi3Real)), data.size)
+            status = fmu.fmi3SetReal(fmu.component, vr, len(vr), cast(data.ctypes.data, POINTER(fmi3Float64)), data.size)
             self.assertEqual(status, fmi3OK)
 
         # get "in"

@@ -10,7 +10,7 @@ fmi3Component            = c_void_p
 fmi3ComponentEnvironment = c_void_p
 fmi3FMUstate             = c_void_p
 fmi3ValueReference       = c_uint
-fmi3Real                 = c_double
+fmi3Float64                 = c_double
 fmi3Integer              = c_int
 fmi3Boolean              = c_int
 fmi3Char                 = c_char
@@ -91,7 +91,7 @@ class fmi3EventInfo(Structure):
                 ('nominalsOfContinuousStatesChanged', fmi3Boolean),
                 ('valuesOfContinuousStatesChanged',   fmi3Boolean),
                 ('nextEventTimeDefined',              fmi3Boolean),
-                ('nextEventTime',                     fmi3Real)]
+                ('nextEventTime',                     fmi3Float64)]
 
 
 class _FMU3(_FMU):
@@ -121,7 +121,7 @@ class _FMU3(_FMU):
         # Enter and exit initialization mode, terminate and reset
         self._fmi3Function('fmi3SetupExperiment',
                            ['component', 'toleranceDefined', 'tolerance', 'startTime', 'stopTimeDefined', 'stopTime'],
-                           [fmi3Component, fmi3Boolean, fmi3Real, fmi3Real, fmi3Boolean, fmi3Real])
+                           [fmi3Component, fmi3Boolean, fmi3Float64, fmi3Float64, fmi3Boolean, fmi3Float64])
 
         self._fmi3Function('fmi3EnterInitializationMode', ['component'], [fmi3Component], fmi3Status)
 
@@ -132,9 +132,9 @@ class _FMU3(_FMU):
         self._fmi3Function('fmi3Reset', ['component'], [fmi3Component], fmi3Status)
 
         # Getting and setting variable values
-        self._fmi3Function('fmi3GetReal',
+        self._fmi3Function('fmi3GetFloat64',
                            ['component', 'vr', 'nvr', 'value', 'nValues'],
-                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Real), c_size_t])
+                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Float64), c_size_t])
 
         self._fmi3Function('fmi3GetInteger',
                            ['component', 'vr', 'nvr', 'value', 'nValues'],
@@ -150,7 +150,7 @@ class _FMU3(_FMU):
 
         self._fmi3Function('fmi3SetReal',
                            ['component', 'vr', 'nvr', 'value', 'nValues'],
-                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Real), c_size_t])
+                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Float64), c_size_t])
 
         self._fmi3Function('fmi3SetInteger',
                            ['component', 'vr', 'nvr', 'value', 'nValues'],
@@ -189,7 +189,7 @@ class _FMU3(_FMU):
         # Getting partial derivatives
         self._fmi3Function('fmi3GetDirectionalDerivative',
                            ['component', 'vUnknown_ref', 'nUnknown', 'vKnown_ref', 'nKnown', 'dvKnown', 'dvUnknown'],
-                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Real), POINTER(fmi3Real)])
+                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Float64), POINTER(fmi3Float64)])
 
     def _fmi3Function(self, fname, argnames, argtypes, restype=fmi3Status):
         """ Add an FMI 3.0 function to this instance and add a wrapper that allows
@@ -302,12 +302,12 @@ class _FMU3(_FMU):
 
     # Getting and setting variable values
 
-    def getReal(self, vr, nValues=None):
+    def getFloat64(self, vr, nValues=None):
         if nValues is None:
             nValues = len(vr)
         vr = (fmi3ValueReference * len(vr))(*vr)
-        values = (fmi3Real * nValues)()
-        self.fmi3GetReal(self.component, vr, len(vr), values, nValues)
+        values = (fmi3Float64 * nValues)()
+        self.fmi3GetFloat64(self.component, vr, len(vr), values, nValues)
         return list(values)
 
     def getInteger(self, vr, nValues=None):
@@ -334,7 +334,7 @@ class _FMU3(_FMU):
 
     def setReal(self, vr, value):
         vr = (fmi3ValueReference * len(vr))(*vr)
-        value = (fmi3Real * len(vr))(*value)
+        value = (fmi3Float64 * len(vr))(*value)
         self.fmi3SetReal(self.component, vr, len(vr), value, 1)
 
     def setInteger(self, vr, value):
@@ -409,8 +409,8 @@ class _FMU3(_FMU):
 
         vUnknown_ref = (fmi3ValueReference * len(vUnknown_ref))(*vUnknown_ref)
         vKnown_ref = (fmi3ValueReference * len(vKnown_ref))(*vKnown_ref)
-        dvKnown = (fmi3Real * len(dvKnown))(*dvKnown)
-        dvUnknown = (fmi3Real * len(vUnknown_ref))()
+        dvKnown = (fmi3Float64 * len(dvKnown))(*dvKnown)
+        dvUnknown = (fmi3Float64 * len(vUnknown_ref))()
 
         self.fmi3GetDirectionalDerivative(self.component, vUnknown_ref, len(vUnknown_ref), vKnown_ref, len(vKnown_ref), dvKnown, dvUnknown)
 
@@ -440,23 +440,23 @@ class FMU3Model(_FMU3):
 
         self._fmi3Function('fmi3GetContinuousStates',
                            ['component', 'x', 'nx'],
-                           [fmi3Component, POINTER(fmi3Real), c_size_t])
+                           [fmi3Component, POINTER(fmi3Float64), c_size_t])
 
         self._fmi3Function('fmi3SetContinuousStates',
                            ['component', 'x', 'nx'],
-                           [fmi3Component, POINTER(fmi3Real), c_size_t])
+                           [fmi3Component, POINTER(fmi3Float64), c_size_t])
 
         self._fmi3Function('fmi3GetDerivatives',
                            ['component', 'derivatives', 'nx'],
-                           [fmi3Component, POINTER(fmi3Real), c_size_t])
+                           [fmi3Component, POINTER(fmi3Float64), c_size_t])
 
         self._fmi3Function('fmi3GetEventIndicators',
                            ['component', 'eventIndicators', 'ni'],
-                           [fmi3Component, POINTER(fmi3Real), c_size_t])
+                           [fmi3Component, POINTER(fmi3Float64), c_size_t])
 
         self._fmi3Function('fmi3SetTime',
                            ['component', 'time'],
-                           [fmi3Component, fmi3Real])
+                           [fmi3Component, fmi3Float64])
 
         self._fmi3Function('fmi3CompletedIntegratorStep',
                            ['component', 'noSetFMUStatePriorToCurrentPoint', 'enterEventMode', 'terminateSimulation'],
@@ -515,15 +515,15 @@ class FMU3Slave(_FMU3):
 
         self._fmi3Function('fmi3SetRealInputDerivatives',
                            ['c', 'vr', 'nvr', 'order', 'value'],
-                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Integer), POINTER(fmi3Real)])
+                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Integer), POINTER(fmi3Float64)])
 
         self._fmi3Function('fmi3GetRealOutputDerivatives',
                            ['c', 'vr', 'nvr', 'order', 'value'],
-                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Integer), POINTER(fmi3Real)])
+                           [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Integer), POINTER(fmi3Float64)])
 
         self._fmi3Function('fmi3DoStep',
                            ['component', 'currentCommunicationPoint', 'communicationStepSize', 'noSetFMUStatePriorToCurrentPoint'],
-                           [fmi3Component, fmi3Real, fmi3Real, fmi3Boolean])
+                           [fmi3Component, fmi3Float64, fmi3Float64, fmi3Boolean])
 
         self._fmi3Function('fmi3CancelStep', ['component'], [fmi3Component])
 
@@ -535,7 +535,7 @@ class FMU3Slave(_FMU3):
 
         self._fmi3Function('fmi3GetRealStatus',
                            ['component', 'kind', 'value'],
-                           [fmi3Component, fmi3StatusKind, POINTER(fmi3Real)])
+                           [fmi3Component, fmi3StatusKind, POINTER(fmi3Float64)])
 
         self._fmi3Function('fmi3GetIntegerStatus',
                            ['component', 'kind', 'value'],
@@ -554,13 +554,13 @@ class FMU3Slave(_FMU3):
     def setRealInputDerivatives(self, vr, order, value):
         vr = (fmi3ValueReference * len(vr))(*vr)
         order = (fmi3Integer * len(vr))(*order)
-        value = (fmi3Real * len(vr))(*value)
+        value = (fmi3Float64 * len(vr))(*value)
         self.fmi3SetRealInputDerivatives(self.component, vr, len(vr), order, value)
 
     def getRealOutputDerivatives(self, vr, order):
         vr = (fmi3ValueReference * len(vr))(*vr)
         order = (fmi3Integer * len(vr))(*order)
-        value = (fmi3Real * len(vr))()
+        value = (fmi3Float64 * len(vr))()
         self.fmi3GetRealOutputDerivatives(self.component, vr, len(vr), order, value)
         return list(value)
 
@@ -578,7 +578,7 @@ class FMU3Slave(_FMU3):
         return value
 
     def getRealStatus(self, kind):
-        value = fmi3Real(0.0)
+        value = fmi3Float64(0.0)
         self.fmi3GetRealStatus(self.component, kind, byref(value))
         return value
 
