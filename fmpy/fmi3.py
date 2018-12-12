@@ -514,12 +514,12 @@ class FMU3Slave(_FMU3):
 
         # Simulating the slave
 
-        self._fmi3Function('fmi3SetRealInputDerivatives',
-                           ['c', 'vr', 'nvr', 'order', 'value'],
+        self._fmi3Function('fmi3SetInputDerivatives',
+                           ['component', 'vr', 'nvr', 'order', 'value'],
                            [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Int32), POINTER(fmi3Float64)])
 
-        self._fmi3Function('fmi3GetRealOutputDerivatives',
-                           ['c', 'vr', 'nvr', 'order', 'value'],
+        self._fmi3Function('fmi3GetOutputDerivatives',
+                           ['component', 'vr', 'nvr', 'order', 'value'],
                            [fmi3Component, POINTER(fmi3ValueReference), c_size_t, POINTER(fmi3Int32), POINTER(fmi3Float64)])
 
         self._fmi3Function('fmi3DoStep',
@@ -552,17 +552,17 @@ class FMU3Slave(_FMU3):
 
     # Simulating the slave
 
-    def setRealInputDerivatives(self, vr, order, value):
+    def setInputDerivatives(self, vr, order, value):
         vr = (fmi3ValueReference * len(vr))(*vr)
         order = (fmi3Int32 * len(vr))(*order)
         value = (fmi3Float64 * len(vr))(*value)
-        self.fmi3SetRealInputDerivatives(self.component, vr, len(vr), order, value)
+        self.fmi3SetInputDerivatives(self.component, vr, len(vr), order, value)
 
-    def getRealOutputDerivatives(self, vr, order):
+    def getOutputDerivatives(self, vr, order):
         vr = (fmi3ValueReference * len(vr))(*vr)
         order = (fmi3Int32 * len(vr))(*order)
         value = (fmi3Float64 * len(vr))()
-        self.fmi3GetRealOutputDerivatives(self.component, vr, len(vr), order, value)
+        self.fmi3GetOutputDerivatives(self.component, vr, len(vr), order, value)
         return list(value)
 
     def doStep(self, currentCommunicationPoint, communicationStepSize, noSetFMUStatePriorToCurrentPoint=fmi3True):
