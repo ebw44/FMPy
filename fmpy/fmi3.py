@@ -46,14 +46,6 @@ fmi3CoSimulation  = 1
 fmi3True  = 1
 fmi3False = 0
 
-fmi3StatusKind = c_int
-
-fmi3DoStepStatus       = 0
-fmi3PendingStatus      = 1
-fmi3LastSuccessfulTime = 2
-fmi3Terminated         = 3
-
-
 # allocated memory
 _mem_addr = set()
 
@@ -530,25 +522,13 @@ class FMU3Slave(_FMU3):
 
         # Inquire slave status
 
-        self._fmi3Function('fmi3GetStatus',
-                           ['component', 'kind', 'value'],
-                           [fmi3Component, fmi3StatusKind, POINTER(fmi3Status)])
+        self._fmi3Function('fmi3GetDoStepPendingStatus',
+                           ['component', 'status', 'message'],
+                           [fmi3Component, POINTER(fmi3Status), POINTER(fmi3String)])
 
-        self._fmi3Function('fmi3GetRealStatus',
-                           ['component', 'kind', 'value'],
-                           [fmi3Component, fmi3StatusKind, POINTER(fmi3Float64)])
-
-        self._fmi3Function('fmi3GetIntegerStatus',
-                           ['component', 'kind', 'value'],
-                           [fmi3Component, fmi3StatusKind, POINTER(fmi3Int32)])
-
-        self._fmi3Function('fmi3GetBooleanStatus',
-                           ['component', 'kind', 'value'],
-                           [fmi3Component, fmi3StatusKind, POINTER(fmi3Boolean)])
-
-        self._fmi3Function('fmi3GetStringStatus',
-                           ['component', 'kind', 'value'],
-                           [fmi3Component, fmi3StatusKind, POINTER(fmi3String)])
+        self._fmi3Function('fmi3GetDoStepDiscardedStatus',
+                           ['component', 'terminate', 'lastSuccessfulTime'],
+                           [fmi3Component, POINTER(fmi3Boolean), POINTER(fmi3Float64)])
 
     # Simulating the slave
 
