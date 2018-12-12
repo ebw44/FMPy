@@ -49,7 +49,12 @@ class Recorder(object):
                 self.info[sv.type] = names, vrs, shapes, n_values, getter
 
         # create the columns for the NumPy array
-        for t, dt in [('Float64', np.float64), ('Integer', np.int32), ('Boolean', np.bool_)]:
+        if modelDescription.fmiVersion in ['1.0', '2.0']:
+            types = [('Real', np.float64), ('Integer', np.int32), ('Boolean', np.bool_)]
+        else:
+            types = [('Float64', np.float64), ('Int32', np.int32), ('Boolean', np.bool_)]
+
+        for t, dt in types:
             if t in self.info:
                 self.types.append(t)
                 names, _, shapes, _, _ = self.info[t]
@@ -83,7 +88,10 @@ class Recorder(object):
 
         for t in self.types:
             names, vrs, shapes, nValues, getter = self.info[t]
-            values = getter(vr=vrs, nValues=nValues)
+            if self.modelDescription.fmiVersion in ['1.0', '2.0']:
+                values = getter(vr=vrs)
+            else:
+                values = getter(vr=vrs, nValues=nValues)
             self._append_reshaped(row, values, shapes)
 
         self.rows.append(tuple(row))
