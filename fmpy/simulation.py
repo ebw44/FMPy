@@ -6,6 +6,7 @@ import sys
 from .fmi1 import *
 from .fmi1 import _FMU1
 from .fmi2 import *
+from .fmi2 import _FMU2
 from . import fmi3
 from . import extract
 from .util import auto_interval
@@ -52,7 +53,7 @@ class Recorder(object):
         if modelDescription.fmiVersion in ['1.0', '2.0']:
             types = [('Real', np.float64), ('Integer', np.int32), ('Boolean', np.bool_)]
         else:
-            types = [('Float64', np.float64), ('Int32', np.int32), ('Boolean', np.bool_)]
+            types = [('Float64', np.float64), ('Int32', np.int32), ('UInt64', np.uint64), ('Boolean', np.bool_)]
 
         for t, dt in types:
             if t in self.info:
@@ -138,6 +139,7 @@ class Input(object):
         self.t = signals[signals.dtype.names[0]]
 
         is_fmi1 = isinstance(fmu, _FMU1)
+        is_fmi2 = isinstance(fmu, _FMU2)
 
         # get the setters
         if is_fmi1:
@@ -145,13 +147,22 @@ class Input(object):
             self._setInteger = fmu.fmi1SetInteger
             self._setBoolean = fmu.fmi1SetBoolean
             self._bool_type = fmi1Boolean
-        else:
+        elif is_fmi2:
             self._setReal = fmu.fmi2SetReal
             self._setInteger = fmu.fmi2SetInteger
             self._setBoolean = fmu.fmi2SetBoolean
             self._bool_type = fmi2Boolean
+        else:
+            self._setReal = fmu.fmi3SetFloat64
+            self._setInteger = fmu.fmi3SetInt32
+            self._setUInt64 = fmu.fmi3SetUInt64
+            self._setBoolean = fmu.fmi3SetBoolean
+            self._bool_type = fmi2Boolean
 
-        self.values = {'Real': [], 'Integer': [], 'Boolean': [], 'String': []}
+        if is_fmi1 or is_fmi2:
+            self.values = {'Real': [], 'Integer': [], 'Boolean': [], 'String': []}
+        else:
+            self.values = {'Float64': [], 'Int32': [], 'UInt64': [], 'Boolean': [], 'String': []}
 
         for sv in modelDescription.modelVariables:
 
@@ -164,21 +175,29 @@ class Input(object):
                     continue
                 self.values['Integer' if sv.type == 'Enumeration' else sv.type].append((sv.valueReference, sv.name))
 
-        if len(self.values['Real']) > 0:
-            real_vrs, self.real_names = zip(*self.values['Real'])
+        if len(self.values['Float64']) > 0:
+            real_vrs, self.real_names = zip(*self.values['Float64'])
             self.real_vrs = (c_uint32 * len(real_vrs))(*real_vrs)
             self.real_values = (c_double * len(real_vrs))()
             self.real_table = np.stack(map(lambda n: signals[n], self.real_names))
         else:
             self.real_vrs = []
 
-        if len(self.values['Integer']) > 0:
-            integer_vrs, self.integer_names = zip(*self.values['Integer'])
+        if len(self.values['Int32']) > 0:
+            integer_vrs, self.integer_names = zip(*self.values['Int32'])
             self.integer_vrs = (c_uint32 * len(integer_vrs))(*integer_vrs)
             self.integer_values = (c_int32 * len(integer_vrs))()
             self.integer_table = np.asarray(np.stack(map(lambda n: signals[n], self.integer_names)), dtype=np.int32)
         else:
             self.integer_vrs = []
+
+        if len(self.values['UInt64']) > 0:
+            uint64_vrs, self.uint64_names = zip(*self.values['UInt64'])
+            self.uint64_vrs = (c_uint32 * len(integer_vrs))(*uint64_vrs)
+            self.uint64_values = (c_uint64 * len(uint64_vrs))()
+            self.uint64_table = np.asarray(np.stack(map(lambda n: signals[n], self.uint64_names)), dtype=np.uint64)
+        else:
+            self.uint64_vrs = []
 
         if len(self.values['Boolean']) > 0:
             boolean_vrs, self.boolean_names = zip(*self.values['Boolean'])
@@ -207,18 +226,22 @@ class Input(object):
 
         if len(self.real_vrs) > 0 and continuous:
             self.real_values[:] = self.interpolate(time=time, t=self.t, table=self.real_table, after_event=after_event)
-            self._setReal(self.fmu.component, self.real_vrs, len(self.real_vrs), self.real_values)
+            self._setReal(self.fmu.component, self.real_vrs, len(self.real_vrs), self.real_values, len(self.real_values))
 
         # TODO: discrete apply Reals
 
         if len(self.integer_vrs) > 0 and discrete:
             self.integer_values[:] = self.interpolate(time=time, t=self.t, table=self.integer_table, discrete=True, after_event=after_event)
-            self._setInteger(self.fmu.component, self.integer_vrs, len(self.integer_vrs), self.integer_values)
+            self._setInteger(self.fmu.component, self.integer_vrs, len(self.integer_vrs), self.integer_values, len(self.integer_values))
+
+        if len(self.uint64_vrs) > 0 and discrete:
+            self.uint64_values[:] = self.interpolate(time=time, t=self.t, table=self.uint64_table, discrete=True, after_event=after_event)
+            self._setUInt64(self.fmu.component, self.uint64_vrs, len(self.uint64_vrs), self.uint64_values, len(self.uint64_values))
 
         if len(self.boolean_vrs) > 0 and discrete:
             self.boolean_values[:] = self.interpolate(time=time, t=self.t, table=self.boolean_table, discrete=True, after_event=after_event)
             self._setBoolean(self.fmu.component, self.boolean_vrs, len(self.boolean_vrs),
-                             cast(self.boolean_values, POINTER(self._bool_type)))
+                             cast(self.boolean_values, POINTER(self._bool_type)), len(self.boolean_values))
 
         return Input.nextEvent(time, self.t)
 

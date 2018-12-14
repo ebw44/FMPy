@@ -217,7 +217,7 @@ class _FMU3(_FMU):
             if restype == fmi3Status:  # status code
                 # check the status code
                 if res > fmi3Warning:
-                    raise Exception("FMI call failed with status %d." % res)
+                    raise Exception("%s failed with status %d." % (fname, res))
 
             return res
 
@@ -303,12 +303,20 @@ class _FMU3(_FMU):
         self.fmi3GetFloat64(self.component, vr, len(vr), values, nValues)
         return list(values)
 
-    def getInteger(self, vr, nValues=None):
+    def getInt32(self, vr, nValues=None):
         if nValues is None:
             nValues = len(vr)
         vr = (fmi3ValueReference * len(vr))(*vr)
         value = (fmi3Int32 * nValues)()
-        self.fmi3GetInteger(self.component, vr, len(vr), value, nValues)
+        self.fmi3GetInt32(self.component, vr, len(vr), value, nValues)
+        return list(value)
+
+    def getUInt64(self, vr, nValues=None):
+        if nValues is None:
+            nValues = len(vr)
+        vr = (fmi3ValueReference * len(vr))(*vr)
+        value = (fmi3UInt64 * nValues)()
+        self.fmi3GetUInt64(self.component, vr, len(vr), value, nValues)
         return list(value)
 
     def getBoolean(self, vr, nValues=None):
@@ -325,15 +333,15 @@ class _FMU3(_FMU):
         self.fmi3GetString(self.component, vr, len(vr), value)
         return list(value)
 
-    def setReal(self, vr, value):
+    def setFloat64(self, vr, value):
         vr = (fmi3ValueReference * len(vr))(*vr)
         value = (fmi3Float64 * len(vr))(*value)
-        self.fmi3SetReal(self.component, vr, len(vr), value, 1)
+        self.fmi3SetFloat64(self.component, vr, len(vr), value, 1)
 
-    def setInteger(self, vr, value):
+    def setInt32(self, vr, value):
         vr = (fmi3ValueReference * len(vr))(*vr)
         value = (fmi3Int32 * len(vr))(*value)
-        self.fmi3SetInteger(self.component, vr, len(vr), value)
+        self.fmi3SetInt32(self.component, vr, len(vr), value)
 
     def setBoolean(self, vr, value):
         vr = (fmi3ValueReference * len(vr))(*vr)
