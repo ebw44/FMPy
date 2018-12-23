@@ -350,8 +350,7 @@ def apply_start_values(fmu, model_description, start_values, apply_default_start
                 if value.lower() not in ['true', 'false']:
                     raise Exception('The start value "%s" for variable "%s" could not be converted to Boolean' %
                                     (value, variable.name))
-                else:
-                    value = value.lower() == 'true'
+                value = value.lower() == 'true'
             fmu.setBoolean([vr], [bool(value)])
         elif variable.type == 'String':
             fmu.setString([vr], [value])
