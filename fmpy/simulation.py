@@ -339,7 +339,9 @@ def apply_start_values(fmu, model_description, start_values, apply_default_start
 
         vr = variable.valueReference
 
-        if variable.type == 'Real':
+        if variable.type == 'Float64':
+            fmu.setFloat64([vr], [float(value)])
+        elif variable.type == 'Real':
             fmu.setReal([vr], [float(value)])
         elif variable.type in ['Integer', 'Enumeration']:
             fmu.setInteger([vr], [int(value)])
