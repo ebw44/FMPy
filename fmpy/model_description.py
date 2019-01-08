@@ -432,7 +432,12 @@ def read_model_description(filename, validate=True):
         sv.variability = variable.get('variability')
         sv.initial = variable.get('initial')
 
-        value = next(variable.iterchildren())
+        # get the "value" tag
+        for child in variable.iterchildren():
+            if child.tag in ['Real', 'Integer', 'Boolean', 'String', 'Enumeration']:
+                value = child
+                break
+
         sv.type = value.tag
         sv.start = value.get('start')
 
@@ -526,6 +531,13 @@ def read_model_description(filename, validate=True):
             unit_definitions[unit.name] = [display_unit.name for display_unit in unit.displayUnits]
 
         if modelDescription.fmiVersion == '2.0':
+
+            # validate outputs
+            outputs = set([v for v in modelDescription.modelVariables if v.causality == 'output'])
+            unknowns = set([u.variable for u in modelDescription.outputs])
+
+            if outputs != unknowns:
+                raise Exception('ModelStructure/Outputs must have exactly one entry for each variable with causality="output"')
 
             # validate units
             for variable in modelDescription.modelVariables:
