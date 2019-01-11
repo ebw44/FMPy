@@ -434,7 +434,7 @@ def read_model_description(filename, validate=True):
 
         # get the "value" tag
         for child in variable.iterchildren():
-            if child.tag in ['Real', 'Integer', 'Boolean', 'String', 'Enumeration']:
+            if child.tag in {'Int32', 'Float64', 'Real', 'Integer', 'Boolean', 'String', 'Enumeration'}:
                 value = child
                 break
 
