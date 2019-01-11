@@ -225,10 +225,6 @@ class _FMU3(_FMU):
 
     # Inquire version numbers of header files and setting logging status
 
-    def getTypesPlatform(self):
-        types_platform = self.fmi3GetTypesPlatform()
-        return types_platform.decode('utf-8')
-
     def getVersion(self):
         version = self.fmi3GetVersion()
         return version.decode('utf-8')
