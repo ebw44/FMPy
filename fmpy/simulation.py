@@ -128,7 +128,7 @@ class Input(object):
         self.t = signals[signals.dtype.names[0]]
 
         # find events
-        self.t_events = Input.findEvents(signals)
+        self.t_events = Input.findEvents(signals, modelDescription)
 
         is_fmi1 = isinstance(fmu, _FMU1)
 
@@ -144,7 +144,12 @@ class Input(object):
             self._setBoolean = fmu.fmi2SetBoolean
             self._bool_type = fmi2Boolean
 
-        self.values = {'Real': [], 'Integer': [], 'Boolean': [], 'String': []}
+        self.values = {
+            'Real': [],
+            'Real_discrete': [],
+            'Integer': [],
+            'Boolean': [],
+            'String': []}
 
         for sv in modelDescription.modelVariables:
 
@@ -155,7 +160,10 @@ class Input(object):
                 if sv.name not in signals.dtype.names:
                     print("Warning: missing input for " + sv.name)
                     continue
-                self.values['Integer' if sv.type == 'Enumeration' else sv.type].append((sv.valueReference, sv.name))
+                type_ = 'Integer' if sv.type == 'Enumeration' else sv.type
+                if type_ == 'Real' and sv.variability == 'discrete':
+                    type_ += '_discrete'
+                self.values[type_].append((sv.valueReference, sv.name))
 
         if len(self.values['Real']) > 0:
             real_vrs, self.real_names = zip(*self.values['Real'])
@@ -164,6 +172,14 @@ class Input(object):
             self.real_table = np.stack(map(lambda n: signals[n], self.real_names))
         else:
             self.real_vrs = []
+
+        if len(self.values['Real_discrete']) > 0:
+            vrs, self.real_discrete_names = zip(*self.values['Real_discrete'])
+            self.real_discrete_vrs = (c_uint32 * len(vrs))(*vrs)
+            self.real_discrete_values = (c_double * len(vrs))()
+            self.real_discrete_table = np.stack(map(lambda n: signals[n], self.real_discrete_names))
+        else:
+            self.real_discrete_vrs = []
 
         if len(self.values['Integer']) > 0:
             integer_vrs, self.integer_names = zip(*self.values['Integer'])
@@ -194,15 +210,17 @@ class Input(object):
         """
 
         if self.t is None:
-            return sys.float_info.max
+            return float('Inf')
 
-        # TODO: check for event
-
+        # continuous
         if len(self.real_vrs) > 0 and continuous:
             self.real_values[:] = self.interpolate(time=time, t=self.t, table=self.real_table, after_event=after_event)
             self._setReal(self.fmu.component, self.real_vrs, len(self.real_vrs), self.real_values)
 
-        # TODO: discrete apply Reals
+        # discrete
+        if len(self.real_discrete_vrs) > 0 and discrete:
+            self.real_discrete_values[:] = self.interpolate(time=time, t=self.t, table=self.real_discrete_table, discrete=True, after_event=after_event)
+            self._setReal(self.fmu.component, self.real_discrete_vrs, len(self.real_discrete_vrs), self.real_discrete_values)
 
         if len(self.integer_vrs) > 0 and discrete:
             self.integer_values[:] = self.interpolate(time=time, t=self.t, table=self.integer_table, discrete=True, after_event=after_event)
@@ -218,12 +236,25 @@ class Input(object):
         return self.t_events[i]
 
     @staticmethod
-    def findEvents(signals):
+    def findEvents(signals, model_description):
         """ Find time events """
+
+        t_event = {float('Inf')}
+
         t = signals[signals.dtype.names[0]]
-        i_events = np.where(np.diff(t) == 0)
-        t_events = np.append(t[i_events], [sys.float_info.max])
-        return np.unique(t_events)
+
+        # continuous
+        i_event = np.where(np.diff(t) == 0)
+        t_event.update(t[i_event])
+
+        # discrete
+        for variable in model_description.modelVariables:
+            if variable.name in signals.dtype.names and variable.variability == 'discrete':
+                y = signals[variable.name]
+                i_event = np.flatnonzero(np.diff(y))
+                t_event.update(t[i_event + 1])
+
+        return np.array(sorted(t_event))
 
     @staticmethod
     def interpolate(time, t, table, discrete=False, after_event=False):
@@ -248,11 +279,10 @@ class Input(object):
             return table[:, i0]
 
         i0 -= 1  # interpolate
+        i1 = i0 + 1
 
         if discrete:
-            return table[:, i0]  # hold
-
-        i1 = i0 + 1
+            return table[:, i1 if after_event else i0]
 
         t0 = t[i0]
         t1 = t[i1]
@@ -539,14 +569,15 @@ def simulateME(model_description, fmu_kwargs, start_time, stop_time, solver_name
 
     input = Input(fmu, model_description, input_signals)
 
-    # apply input and start values
+    # apply start values
     apply_start_values(fmu, model_description, start_values, apply_default_start_values)
-    input.apply(time)
 
     if is_fmi1:
+        input.apply(time)
         fmu.initialize()
     else:
         fmu.enterInitializationMode()
+        input.apply(time)
         fmu.exitInitializationMode()
 
         # event iteration
