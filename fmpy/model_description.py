@@ -293,6 +293,9 @@ def read_model_description(filename, validate=True):
     _copy_attributes(root, modelDescription, ['fmiVersion', 'guid', 'modelName', 'description', 'generationTool',
                                               'generationDateAndTime', 'variableNamingConvention'])
 
+    if fmiVersion.startswith('3.0'):
+        modelDescription.guid = root.get('instantiationToken')
+
     if root.get('numberOfEventIndicators') is not None:
         modelDescription.numberOfEventIndicators = int(root.get('numberOfEventIndicators'))
 
@@ -432,11 +435,14 @@ def read_model_description(filename, validate=True):
         sv.variability = variable.get('variability')
         sv.initial = variable.get('initial')
 
-        # get the "value" tag
-        for child in variable.iterchildren():
-            if child.tag in {'Int32', 'Float64', 'Real', 'Integer', 'Boolean', 'String', 'Enumeration'}:
-                value = child
-                break
+        if fmiVersion in ['1.0', '2.0']:
+            # get the "value" element
+            for child in variable.iterchildren():
+                if child.tag in {'Real', 'Integer', 'Boolean', 'String', 'Enumeration'}:
+                    value = child
+                    break
+        else:
+            value = variable
 
         sv.type = value.tag
         sv.start = value.get('start')
