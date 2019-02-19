@@ -99,7 +99,7 @@ def supported_platforms(filename):
     for bitness, architecture in [('32', 'i686'), ('64', 'x86_64')]:
         for name in names:
             head, tail = os.path.split(name)
-            if head in {'binaries/linux' + bitness, 'binaries/' + architecture + '-linux'} and tail.endswith('.dll'):
+            if head in {'binaries/linux' + bitness, 'binaries/' + architecture + '-linux'} and tail.endswith('.so'):
                 platforms.append('linux' + bitness)
                 break
 
