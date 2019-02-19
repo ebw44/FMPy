@@ -1,9 +1,11 @@
 """ FMI 3.0 interface """
 
+import os
 import pathlib
 from ctypes import *
 from . import free, calloc
 from .fmi1 import _FMU, printLogMessage
+from . import architecture, system, sharedLibraryExtension
 
 
 fmi3Component            = c_void_p
@@ -98,6 +100,10 @@ class _FMU3(_FMU):
     """ Base class for FMI 3.0 FMUs """
 
     def __init__(self, **kwargs):
+
+        # build the path to the shared library
+        kwargs['libraryPath'] = os.path.join(kwargs['unzipDirectory'], 'binaries', architecture + '-' + system,
+                                             kwargs['modelIdentifier'] + sharedLibraryExtension)
 
         super(_FMU3, self).__init__(**kwargs)
 
