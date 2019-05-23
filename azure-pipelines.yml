@@ -29,10 +29,7 @@ jobs:
       for f in dist/FMPy-*.whl; do
         pip install $f --no-deps -vv
       done
-    displayName: Build & install FMPy
-
-  - bash: |
       cd tests
       python -m unittest discover
       cd ..
-    displayName: Run tests
+    displayName: Build, install and run tests
