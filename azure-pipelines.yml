@@ -124,9 +124,7 @@ jobs:
   - script: |
       call activate myEnvironment
       python setup.py bdist_wheel --universal
-      for f in dist/FMPy-*.whl; do
-        pip install $f --no-deps -vv
-      done
+      for %%f in (dist\FMPy-*.whl) do pip install %%f --no-deps
       cd tests
       pytest --junitxml=junit/test-results.xml --cov=fmpy --cov-report=xml --cov-report=html
       cd ..
