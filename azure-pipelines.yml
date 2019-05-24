@@ -20,7 +20,7 @@ jobs:
 
   - bash: |
       source activate myEnvironment
-      conda install --yes --quiet --name myEnvironment python=$PYTHON_VERSION dask lxml matplotlib numpy pathlib pyqt pyqtgraph requests
+      conda install --yes --quiet --name myEnvironment -c conda-forge python=$PYTHON_VERSION dask lxml matplotlib numpy pathlib pyqt pyqtgraph pytest-cov requests
     displayName: Install Anaconda packages
 
   - bash: |
@@ -30,6 +30,18 @@ jobs:
         pip install $f --no-deps -vv
       done
       cd tests
-      python -m unittest discover
+      pytest --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
       cd ..
     displayName: Build, install and run tests
+
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: '**/test-*.xml'
+      testRunTitle: 'Publish test results for Python $(python.version)'
+
+  - task: PublishCodeCoverageResults@1
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+      reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
