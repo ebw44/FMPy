@@ -1,29 +1,15 @@
 jobs:
 
 - job:
-  displayName: "Ubuntu 16.04"
+  displayName: 'Ubuntu 16.04'
   strategy:
     matrix:
-      linux27:
-        imageName: 'ubuntu-16.04'
+      python27:
         python.version: '2.7'
-      linux36:
-        imageName: 'ubuntu-16.04'
-        python.version: '3.6'
-      mac27:
-        imageName: 'macos-10.13'
-        python.version: '2.7'
-      mac36:
-        imageName: 'macos-10.13'
-        python.version: '3.6'
-      windows27:
-        imageName: 'vs2017-win2016'
-        python.version: '2.7'
-      windows36:
-        imageName: 'vs2017-win2016'
+      python36:
         python.version: '3.6'
   pool:
-    vmImage: $(imageName)
+    vmImage: 'ubuntu-16.04'
   steps:
   - bash: echo "##vso[task.prependpath]$CONDA/bin"
     displayName: Add conda to PATH
@@ -38,6 +24,105 @@ jobs:
 
   - bash: |
       source activate myEnvironment
+      python setup.py bdist_wheel --universal
+      for f in dist/FMPy-*.whl; do
+        pip install $f --no-deps -vv
+      done
+      cd tests
+      pytest --junitxml=junit/test-results.xml --cov=fmpy --cov-report=xml --cov-report=html
+      cd ..
+    displayName: Build, install and run tests
+
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: '**/test-*.xml'
+      testRunTitle: 'Publish test results for Python $(python.version)'
+
+  - task: PublishCodeCoverageResults@1
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+      reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
+
+- job:
+  displayName: 'macOS 10.13'
+  strategy:
+    matrix:
+      python27:
+        python.version: '2.7'
+      python36:
+        python.version: '3.6'
+  pool:
+    vmImage: 'macos-10.13'
+
+  steps:
+
+  - bash: echo "##vso[task.prependpath]$CONDA/bin"
+    displayName: Add conda to PATH
+
+  # On Hosted macOS, the agent user doesn't have ownership of Miniconda's installation directory/
+  # We need to take ownership if we want to update conda or install packages globally
+  - bash: sudo chown -R $USER $CONDA
+    displayName: Take ownership of conda installation
+
+  - bash: conda create --yes --quiet --name myEnvironment
+    displayName: Create Anaconda environment
+
+  - bash: |
+      source activate myEnvironment
+      conda install --yes --quiet --name myEnvironment -c conda-forge python=$PYTHON_VERSION dask lxml matplotlib numpy pathlib pyqt pyqtgraph pytest-cov requests
+    displayName: Install Anaconda packages
+
+  - bash: |
+      source activate myEnvironment
+      python setup.py bdist_wheel --universal
+      for f in dist/FMPy-*.whl; do
+        pip install $f --no-deps -vv
+      done
+      cd tests
+      pytest --junitxml=junit/test-results.xml --cov=fmpy --cov-report=xml --cov-report=html
+      cd ..
+    displayName: Build, install and run tests
+
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: '**/test-*.xml'
+      testRunTitle: 'Publish test results for Python $(python.version)'
+
+  - task: PublishCodeCoverageResults@1
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+      reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
+
+- job:
+  displayName: 'Windows 2016'
+  strategy:
+    matrix:
+      python27:
+        python.version: '2.7'
+      python36:
+        python.version: '3.6'
+  pool:
+    vmImage: 'vs2017-win2016'
+
+  steps:
+
+  - powershell: Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
+    displayName: Add conda to PATH
+
+  - script: conda create --yes --quiet --name myEnvironment
+    displayName: Create Anaconda environment
+
+  - script: |
+      call activate myEnvironment
+      conda install --yes --quiet --name myEnvironment -c conda-forge python=%PYTHON_VERSION% dask lxml matplotlib numpy pathlib pyqt pyqtgraph pytest-cov requests
+    displayName: Install Anaconda packages
+
+  - script: |
+      call activate myEnvironment
       python setup.py bdist_wheel --universal
       for f in dist/FMPy-*.whl; do
         pip install $f --no-deps -vv
