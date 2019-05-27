@@ -371,8 +371,15 @@ class MainWindow(QMainWindow):
         try:
             self.modelDescription = md = read_model_description(filename)
         except Exception as e:
-            QMessageBox.warning(self, "Failed to load FMU", "Failed to load %s. %s" % (filename, e))
-            return
+            button = QMessageBox.question(self, "Failed to load FMU", "Failed to load %s. %s\n\nDo you want to try with validate=False?" % (filename, e), QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            if button == QMessageBox.Yes:
+                try:
+                    self.modelDescription = md = read_model_description(filename, validate=False)
+                except Exception as e:
+                    QMessageBox.warning(self, "Failed to load FMU", "Failed to load %s. %s" % (filename, e))
+                    return
+            else:
+                return
 
         self.filename = filename
         platforms = supported_platforms(self.filename)
